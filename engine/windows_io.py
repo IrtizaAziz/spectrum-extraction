@@ -18,6 +18,10 @@ open_handle = api('CreateFileW', [w.LPCWSTR,w.DWORD,w.DWORD,w.LPVOID,w.DWORD,w.D
 close_handle = api('CloseHandle', [w.HANDLE], w.BOOL)
 info = api('GetFileInformationByHandleEx', [w.HANDLE,c.c_int,w.LPVOID,w.DWORD], w.BOOL)
 drive_type = api('GetDriveTypeW', [w.LPCWSTR], w.UINT)
+FILE_LIST_DIRECTORY = 0x0001
+FILE_READ_ATTRIBUTES = 0x0080
+FILE_SHARE_READ = 0x0001
+FILE_SHARE_WRITE = 0x0002
 
 
 class StandardInfo(c.Structure):
@@ -27,7 +31,12 @@ class StandardInfo(c.Structure):
 
 def checked_handle(path, *, directory=False, access=0x80000000, create=3):
     flags = 0x00200000 | (0x02000000 if directory else 0)
-    handle = open_handle(str(path), access, 3 if directory else 1, None, create, flags, None)
+    if directory:
+        # Use actual directory-list access so Windows enforces the share mask.
+        # Attribute-only handles did not block rename in the Windows CI test.
+        access = FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES
+    share = (FILE_SHARE_READ | FILE_SHARE_WRITE) if directory else FILE_SHARE_READ
+    handle = open_handle(str(path), access, share, None, create, flags, None)
     if handle == c.c_void_p(-1).value:
         raise c.WinError(c.get_last_error())
     try:

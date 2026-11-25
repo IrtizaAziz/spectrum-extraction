@@ -1,6 +1,6 @@
 """Offline checks of approved browser identity and download admission."""
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import sys
 import tempfile
 import unittest
@@ -20,10 +20,11 @@ class BoundaryTest(unittest.TestCase):
     def test_identity_accepts_only_exact_approved_route(self):
         ws = 'ws://127.0.0.1:9337/devtools/browser/fixture'
         edge = '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
+        home = PurePosixPath('/synthetic/Example Person')
         good = dict(endpoint=ENDPOINT, configured=ENDPOINT, listener='127.0.0.1:9337', executable=edge,
-                    command=f'edge --user-data-dir="{Path.home()}/.hermes/spectrum-edge" --remote-debugging-port=9337',
+                    command=f'edge --user-data-dir="{home}/.hermes/spectrum-edge" --remote-debugging-port=9337',
                     version={'Browser':'Edg/1', 'webSocketDebuggerUrl':ws})
-        with patch('academic_edge.sys.platform', 'darwin'):
+        with patch('academic_edge.sys.platform', 'darwin'), patch('academic_edge.Path.home', return_value=home):
             validate_identity(**good)
             for key, value in [('listener','0.0.0.0:9337'), ('configured',ws+'-stale'), ('executable','Chromium'),
                                ('command',good['command'].replace('spectrum-edge','other-profile'))]:
@@ -50,11 +51,17 @@ class BoundaryTest(unittest.TestCase):
         self.assertEqual(split_command(r'"C:\Program Files\edge.exe" "--user-data-dir=C:\Example User"')[1],
                          r'--user-data-dir=C:\Example User')
         with tempfile.TemporaryDirectory() as folder:
-            path = Path(folder).resolve()/'state'
+            parent = Path(folder).resolve()/'parent'
+            path = parent/'state'
             directory = _directory(path)
             try:
                 with self.assertRaises(OSError):
                     path.rename(path.with_name('moved'))
+                with self.assertRaises(OSError):
+                    parent.rename(parent.with_name('moved-parent'))
+                with self.assertRaises(OSError):
+                    path.rmdir()
+                self.assertTrue(path.is_dir())
                 replace_bytes(directory, 'test.json', b'one')
                 replace_bytes(directory, 'test.json', b'two')
                 self.assertEqual(_read_at(directory, 'test.json'), b'two')
@@ -66,6 +73,8 @@ class BoundaryTest(unittest.TestCase):
                     if lease is not None: os.close(lease)
             finally:
                 close_directory(directory)
+            moved = path.rename(path.with_name('moved'))
+            self.assertEqual((moved/'test.json').read_bytes(), b'two')
 
     def test_download_does_not_dispatch_for_submission_or_ambiguous_reference(self):
         common = O+'/pluginfile.php/3/mod_folder/content/0/lecture.txt'
