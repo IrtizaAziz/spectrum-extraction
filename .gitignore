@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.venv/
+.env
+.env.*
+*.sqlite*
+*.db
+*.log
+*.zip
+/dist/
+/build/
+/state/
+/downloads/
+/reports/
+/graphify-out/
