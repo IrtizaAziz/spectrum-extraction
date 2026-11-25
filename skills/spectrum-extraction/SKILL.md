@@ -1,7 +1,7 @@
 ---
 name: spectrum-extraction
 description: Scan SPeCTRUM courses and archive teaching files on request.
-version: 0.4.0
+version: 0.4.1
 ---
 
 # Spectrum Extraction

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 — Windows compatibility patch
+
+- Use Windows directory-list access with delete sharing disabled so open directory handles block renames and deletion while scan state is in use.
+- Make the macOS identity fixture independent of the host OS. Windows regression tests cover leaf and ancestor renames, deletion, state-file replacement, and exclusive scan leases.
+- Windows remains a preview; authenticated SPeCTRUM scans were not verified.
+
 ## 0.4.0 — Windows preview
 
 - Added native Windows Edge admission, scan state and lock handling, and optional local Tesseract OCR.
